@@ -16,6 +16,8 @@
 ## Code layout
 
 - `cmd/metis-l1dtl`: process startup, RPC validation, lifecycle and shutdown.
+  The standalone `healthcheck` command probes HTTP without service configuration,
+  RPC access or database access; preserve bounded timeouts and exit codes.
 - `internal/config`: CLI flags and validation. Keep defaults documented in
   `README.md` and `config.example.sh` consistent with the code.
 - `internal/ingest`: historical AddressManager/CTC tracking, event decoding,
@@ -76,6 +78,8 @@ parameters, field types, null values and client error behavior, not just routes.
   uses the actual block timestamp. Do not silently normalize this legacy behavior.
 - The default backend is `l1`; explicit unsupported backends return 400.
 - Do not populate transaction-index fields with L1 scan heights.
+- Keep container liveness probes on `/healthz` and readiness probes on `/readyz`.
+  Synchronization lag or an integrity halt must not trigger a liveness restart.
 
 ## Validation and delivery
 

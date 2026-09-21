@@ -1,5 +1,8 @@
 #!/bin/sh
 # Copy and fill in the two required deployment values and the RPC endpoint.
+# Probe separately: ./bin/metis-l1dtl healthcheck
+# Defaults: --url=http://127.0.0.1:7878/healthz --timeout=3s
+# Use /readyz for readiness; update --url if changing --listen below.
 set -eu
 : "${L1_RPC:?Set L1_RPC}"
 : "${ADDRESS_MANAGER:?Set ADDRESS_MANAGER}"

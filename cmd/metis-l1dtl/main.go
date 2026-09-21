@@ -21,6 +21,9 @@ func main() {
 }
 
 func run() error {
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		return runHealthcheck(os.Args[2:])
+	}
 	cfg, err := config.Parse(os.Args[1:])
 	if err != nil {
 		return err

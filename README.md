@@ -219,6 +219,47 @@ service Docker image, live networks, or a complete L2 node.
 
 ## Container
 
+The binary includes a standalone probe requiring no service flags, RPC access,
+database access, shell or curl:
+
+```sh
+metis-l1dtl healthcheck
+metis-l1dtl healthcheck --url=http://127.0.0.1:7878/readyz --timeout=3s
+```
+
+Defaults are `--url=http://127.0.0.1:7878/healthz` and `--timeout=3s`.
+HTTP 200 exits 0 silently; other statuses, connection errors, timeouts and invalid
+arguments exit 1 with a diagnostic on stderr. Redirects are not followed and
+proxy environment variables are ignored. `healthcheck --help` exits 0.
+Set `--url` explicitly when using a different listen address or port.
+
+The Docker image checks liveness every 30s, with a 5s Docker timeout, a 10s
+start period and three retries. Override the command for a custom listener with
+`--health-cmd='metis-l1dtl healthcheck --url=http://127.0.0.1:8080/healthz'`.
+To have Docker health represent synchronization readiness instead, override the
+URL to `/readyz`.
+
+Kubernetes exec probes can use the same binary (container spec fragment):
+
+```yaml
+livenessProbe:
+  exec:
+    command: ["/usr/local/bin/metis-l1dtl", "healthcheck"]
+  timeoutSeconds: 5
+  periodSeconds: 30
+  failureThreshold: 3
+readinessProbe:
+  exec:
+    command: ["/usr/local/bin/metis-l1dtl", "healthcheck", "--url=http://127.0.0.1:7878/readyz"]
+  timeoutSeconds: 5
+  periodSeconds: 10
+  failureThreshold: 1
+```
+
+Liveness remains successful during catch-up or an integrity halt; readiness
+fails in those states. Use `/readyz` for traffic admission and `/healthz` for
+restart decisions. Kubernetes HTTP probes may also target these routes directly.
+
 ```sh
 docker build -t metis-l1dtl .
 docker run --rm -p 127.0.0.1:7878:7878 -v l1dtl-data:/data metis-l1dtl \

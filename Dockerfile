@@ -16,4 +16,6 @@ COPY --from=build /app/bin/metis-l1dtl /usr/local/bin/metis-l1dtl
 USER dtl
 EXPOSE 7878
 VOLUME ["/data"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD ["/usr/local/bin/metis-l1dtl", "healthcheck"]
 ENTRYPOINT ["/usr/local/bin/metis-l1dtl"]
