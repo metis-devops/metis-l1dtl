@@ -2,8 +2,6 @@
 FROM golang:1.27.1-alpine AS build
 WORKDIR /app
 RUN apk add --no-cache ca-certificates git build-base
-ARG CGO_ENABLED=1
-ENV CGO_ENABLED=${CGO_ENABLED}
 COPY . ./
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
