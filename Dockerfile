@@ -1,0 +1,19 @@
+# syntax=docker/dockerfile:1
+FROM golang:1.27.1-alpine AS build
+WORKDIR /app
+RUN apk add --no-cache ca-certificates git build-base
+ARG CGO_ENABLED=1
+ENV CGO_ENABLED=${CGO_ENABLED}
+COPY . ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go build -trimpath -ldflags="-s -w" -o ./bin/ ./cmd/...
+
+FROM alpine:latest
+RUN apk add --no-cache ca-certificates
+RUN addgroup -S dtl && adduser -S -G dtl dtl
+COPY --from=build /app/bin/metis-l1dtl /usr/local/bin/metis-l1dtl
+USER dtl
+EXPOSE 7878
+VOLUME ["/data"]
+ENTRYPOINT ["/usr/local/bin/metis-l1dtl"]

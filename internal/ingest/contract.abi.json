@@ -1,0 +1,58 @@
+[
+  {
+    "type": "event",
+    "name": "TransactionEnqueued",
+    "inputs": [
+      {
+        "name": "chain",
+        "type": "uint256"
+      },
+      {
+        "name": "origin",
+        "type": "address",
+        "indexed": true
+      },
+      {
+        "name": "target",
+        "type": "address",
+        "indexed": true
+      },
+      {
+        "name": "gas",
+        "type": "uint256"
+      },
+      {
+        "name": "data",
+        "type": "bytes"
+      },
+      {
+        "name": "index",
+        "type": "uint256",
+        "indexed": true
+      },
+      {
+        "name": "timestamp",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "AddressSet",
+    "inputs": [
+      {
+        "name": "name",
+        "type": "string",
+        "indexed": true
+      },
+      {
+        "name": "new",
+        "type": "address"
+      },
+      {
+        "name": "old",
+        "type": "address"
+      }
+    ]
+  }
+]

@@ -1,0 +1,6 @@
+/bin/
+/data/
+/metis-l1dtl
+*.test
+coverage.out
+.vscode/
