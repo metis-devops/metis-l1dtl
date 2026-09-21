@@ -11,9 +11,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 FROM alpine:latest
 RUN apk add --no-cache ca-certificates
-RUN addgroup -S dtl && adduser -S -G dtl dtl
 COPY --from=build /app/bin/metis-l1dtl /usr/local/bin/metis-l1dtl
-USER dtl
 EXPOSE 7878
 VOLUME ["/data"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
