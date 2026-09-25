@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
 	"time"
 
@@ -16,11 +17,17 @@ type Config struct {
 	Start, Confirmations, BatchSize uint64
 	Poll                            time.Duration
 	DB, Listen                      string
+	Beacon                          string
+	Inbox, InboxSender, BlobSender  common.Address
+	InboxStart                      uint64
 }
+
+func (c Config) BlobEnabled() bool { return c.Beacon != "" }
 
 func Parse(args []string) (Config, error) {
 	var c Config
 	var manager string
+	var inbox, sender, blobSender string
 	f := flag.NewFlagSet("metis-l1dtl", flag.ContinueOnError)
 	f.SetOutput(os.Stderr)
 	f.StringVar(&c.RPC, "l1-rpc", "", "L1 execution RPC URL")
@@ -33,11 +40,21 @@ func Parse(args []string) (Config, error) {
 	f.DurationVar(&c.Poll, "poll-interval", 5*time.Second, "poll interval")
 	f.StringVar(&c.DB, "db", "data", "Pebble database directory")
 	f.StringVar(&c.Listen, "listen", "0.0.0.0:7878", "HTTP address")
+	f.StringVar(&c.Beacon, "l1-beacon", "", "Beacon REST URL (enables optional Blob ingestion)")
+	f.StringVar(&inbox, "batch-inbox-address", "", "batch Inbox address")
+	f.Uint64Var(&c.InboxStart, "batch-inbox-l1-height", 0, "inclusive Inbox scan start")
+	f.StringVar(&sender, "batch-inbox-sender", "", "initial Batch sender before applicable events")
+	f.StringVar(&blobSender, "batch-inbox-blob-sender", "", "initial Blob sender before applicable events")
 	if err := f.Parse(args); err != nil {
 		return c, err
 	}
 	startSet := false
+	blobFlags := 0
 	f.Visit(func(v *flag.Flag) {
+		switch v.Name {
+		case "l1-beacon", "batch-inbox-address", "batch-inbox-l1-height", "batch-inbox-sender", "batch-inbox-blob-sender":
+			blobFlags++
+		}
 		if v.Name == "l1-start-height" {
 			startSet = true
 		}
@@ -48,6 +65,18 @@ func Parse(args []string) (Config, error) {
 	c.AddressManager = common.HexToAddress(manager)
 	if c.AddressManager == (common.Address{}) {
 		return c, fmt.Errorf("zero AddressManager")
+	}
+	if blobFlags != 0 {
+		u, err := url.Parse(c.Beacon)
+		if blobFlags != 5 || err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.Fragment != "" {
+			return c, fmt.Errorf("blob ingestion requires all five --l1-beacon/--batch-inbox-* flags and an HTTP(S) Beacon URL")
+		}
+		for _, a := range []string{inbox, sender, blobSender} {
+			if !common.IsHexAddress(a) || common.HexToAddress(a) == (common.Address{}) {
+				return c, fmt.Errorf("blob addresses must be nonzero addresses")
+			}
+		}
+		c.Inbox, c.InboxSender, c.BlobSender = common.HexToAddress(inbox), common.HexToAddress(sender), common.HexToAddress(blobSender)
 	}
 	return c, nil
 }

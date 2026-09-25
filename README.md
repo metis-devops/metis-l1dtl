@@ -1,7 +1,7 @@
 # metis-l1dtl
 
 A Go L1 deposit ingestion service for the existing Metis `l2geth` sequencer.
-Storage uses Pebble v2. It implements the DTL HTTP behavior needed when batch ingestion is disabled.
+Storage uses Pebble v2. It implements the DTL deposit HTTP behavior and optionally serves recent L2 blocks decoded from Blob-backed Inbox submissions.
 It is **not** an L2 history recovery service or an L1 verifier backend.
 
 ## Build and run
@@ -97,8 +97,8 @@ Unimplemented routes return 404. Operational failures return 503.
 | `/eth/syncing/:chainId` | `syncing` and `currentTransactionIndex: 0`; no fabricated L2 tip |
 | `/transaction/latest/:chainId` | `{ "transaction": null, "batch": null }` |
 | `/transaction/index/:index/:chainId` | Same empty transaction result |
-| `/block/latest/:chainId` | `{ "block": null, "batch": null }` |
-| `/block/index/:index/:chainId` | Same empty block result |
+| `/block/latest/:chainId` | Highest retained L2 block and its batch; both null when absent or Blob support is disabled |
+| `/block/index/:index/:chainId` | Retained L2 block by index (`L2 block number - 1`) and its batch; both null for gaps or expired data |
 | `/healthz` | Process liveness |
 | `/readyz` | 200 once caught up; 503 while behind or halted |
 
@@ -107,9 +107,109 @@ JSON integer indices/timestamps, hex data/addresses and a decimal string gas lim
 `ctcIndex` is always null. Requests for blocks beyond the confirmation boundary
 return null context fields. Integer inputs and event values are range checked.
 
-There is no CTC/Inbox batch decoding, MinIO/Blob retrieval, state-root/verifier
-API, L2 ingestion, database migration, authentication or multi-chain hosting.
+There is no legacy CTC/non-Blob Inbox batch decoding, MinIO retrieval, batch API,
+state-root/verifier API, L2 node ingestion, old database migration, authentication
+or multi-chain hosting.
 Keep the listener on a trusted network.
+
+## Optional Blob block window
+
+To enable Blob ingestion, provide all five flags in addition to the deposit
+configuration (there are no network presets):
+
+```sh
+--l1-beacon=https://YOUR_BEACON_REST \
+--batch-inbox-address=YOUR_INBOX \
+--batch-inbox-l1-height=INBOX_START_BLOCK \
+--batch-inbox-sender=INITIAL_BATCH_SENDER \
+--batch-inbox-blob-sender=INITIAL_BLOB_SENDER
+```
+
+The Blob start is inclusive and independent of `--l1-start-height`; deposits
+still start at the CTC deployment. The optional worker scans Inbox blocks forward
+from its own start through the confirmed L1 tip. It reads DA=3 commitment headers
+and referenced Blob transaction hashes from calldata; L2 block contents come
+only from those Blobs. Other DA formats are ignored. The execution RPC must also
+serve full historical blocks and transaction receipts. The Beacon service must
+implement `/eth/v1/beacon/blobs/{slot}` with versioned-hash filtering.
+
+Slot selection first uses `slotNumber` from the **Blob transaction's containing
+L1 block**, including a present zero value. Only an absent/null field falls back
+to `(timestamp - genesis_time) / SECONDS_PER_SLOT`; genesis/spec are loaded lazily
+and cached. No Amsterdam activation height is hardcoded. Invalid RPC header
+encoding is an error, not a reason to calculate a replacement slot. Retrieved
+Blobs are checked against their KZG versioned hashes, unpacked into frames and
+complete channels, and decoded as Metis span batches (zlib or Brotli). Channels
+never combine frames from different Inbox submissions. Channel compressed and
+uncompressed data are each limited to 100,000,000 bytes; frame data is limited to
+1,000,000 bytes. Span counts and lengths are checked before allocation.
+
+Sender authorization uses logs only: AddressManager `AddressSet` events select
+historical `Proxy__MVM_InboxSenderManager` addresses; `InboxSenderSet` events
+provide Batch and Blob sender schedules. No AddressManager/sender `eth_call` is
+used. Initialization replays pre-start logs in bounded pages; a newly discovered
+manager's earlier sender events are backfilled. Logs are applied in block,
+transaction and log order, so an event in a transaction affects subsequent
+transactions. The event's `blockNumber` argument is its **effective height**.
+Future-effective records remain pending until that height. Each manager has its
+own schedule; absent an applicable event, the two explicitly configured initial
+senders apply. These defaults are needed because constructor/proxy initialization
+does not emit sender events.
+
+Like the TypeScript event index, a later event overwrites the same manager/type/
+effective-height entry. This is deliberately not a reconstruction of
+`overwriteLastInboxSenders`' unlogged deletions. Management calldata is not
+interpreted. Authorization metadata is retained independently of Blob expiry.
+
+Retention is a fixed **seven days, with no transaction-count cap**, based on the
+confirmed L1 head timestamp. A Blob transaction expires only when its containing
+block timestamp is less than `max(0, confirmed_head_time - 604800)`. Repeated
+references do not renew it. Expiring any source transaction removes all dependent
+channels and L2 blocks, and recalculates the highest retained block. Missing-Blob
+markers also expire. Old historical Blob payloads are never fetched. Cleanup runs
+on a successfully anchored confirmed head even without new Inbox submissions or
+while a later Beacon fetch is failing; it does not advance the scan checkpoint.
+The retention head hash is persisted and checked on subsequent polls/restarts.
+When L1 is unavailable, the last cutoff remains in force; wall-clock time is not
+used. Pebble removes expired logical records atomically; disk space is reclaimed
+by normal compaction.
+
+Unavailable Blob data is skipped: HTTP 404 from the Beacon Blob endpoint
+(regardless of response body), or missing requested hashes in a valid response.
+An incomplete channel is not published; unrelated complete channels can be published with the original
+batch metadata. Missing data is recorded and is not automatically retried after
+commit. Timeouts, network errors, HTTP 429 and 5xx retry without advancing the Blob
+checkpoint. Other HTTP errors (including authentication failures), malformed
+payloads, hash mismatches and conflicting records are errors, not pruning. Missing execution
+transactions/receipts also cannot be treated as Blob pruning.
+
+The Blob worker has independent progress, but shares the fatal-error commit
+barrier with deposits. `/readyz` and `/eth/syncing` require both enabled workers
+to catch up; temporary Beacon failure does not stop deposit ingestion. Existing
+unexpired data remains readable during catch-up. Any integrity halt makes all
+data routes unavailable. `/highest/l1` continues to report the deposit checkpoint;
+`currentTransactionIndex` remains zero. Liveness does not depend on either worker.
+
+Blob identity, authorization, source frames, block/batch data, retention and
+checkpoint metadata live in a separate namespace in the same Pebble database.
+An existing deposit database can initialize an empty Blob namespace without
+resynchronizing deposits. Inbox/start/default-sender configuration is bound to its
+identity: mismatches or missing identity on a populated namespace are rejected.
+Disabling Blob support preserves stored data but restores empty block responses;
+re-enabling validates identity and resumes from the saved checkpoint. This limited,
+potentially sparse window cannot reconstruct a full L2 node. Deposit `ctcIndex`
+remains null and the enqueue cursor is not recovered from Blob blocks.
+
+Block reads fill deposit transaction fields from the committed enqueue records,
+matching TypeScript `_getFullBlock`, including its historical queue-index offset
+(+1 for indices >= 20397). Transaction timestamps fall back to the enqueue timestamp
+only when zero. If an enqueue has not arrived, both block and batch are null; a
+missing record within the committed enqueue range remains an integrity error.
+
+The HTTP schema follows the TypeScript handler. Deposit origins are emitted as
+standard `0x`-prefixed addresses: the TypeScript Blob path's missing prefix is not
+copied because the real RollupClient rejects it. No legacy transaction/batch
+lookup routes are populated from the new block window.
 
 ## Persistence and failures
 
@@ -156,7 +256,7 @@ using a non-default tool executable.
 
 The integration module calls the **real** l2geth RollupClient against an
 HTTP test server. It covers deposit conversion, startup status/context requests,
-empty transaction/block tips and the unconfirmed enqueue path:
+empty transaction/block tips, decoded Blob blocks, retention gaps and the unconfirmed enqueue path:
 
 ```sh
 make integration-test
@@ -166,7 +266,14 @@ It uses the l2geth version pinned in `integration/go.mod`. To test a local
 checkout, run from `integration/`:
 `go mod edit -replace github.com/MetisProtocol/mvm/l2geth=/absolute/path/to/l2geth`.
 Production builds do not depend on that checkout. The default test targets use
-deterministic local RPC doubles.
+deterministic local RPC doubles. Blob tests additionally use local Beacon HTTP
+fixtures and golden output generated by the TypeScript handler (see
+`internal/blob/testdata/README.md`). Six captured mainnet Blob samples cover
+773 blocks / 1361 transactions, KZG verification and real RollupClient reads
+(see `internal/blob/testdata/MAINNET.md`). Their source data was fetched from
+public execution/Beacon nodes on 2026-09-23; normal
+tests replay committed fixtures offline, not a live consensus-node or full
+L2-node synchronization.
 
 ### Anvil E2E
 

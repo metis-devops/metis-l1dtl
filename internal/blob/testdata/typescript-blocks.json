@@ -1,0 +1,77 @@
+{
+  "transactionBatchEntry": {
+    "index": 7,
+    "root": "0x2222222222222222222222222222222222222222222222222222222222222222",
+    "size": 2,
+    "prevTotalElements": 999,
+    "extraData": "",
+    "blockNumber": 50,
+    "timestamp": 100,
+    "submitter": "0x3333333333333333333333333333333333333333",
+    "l1TransactionHash": "0x4444444444444444444444444444444444444444444444444444444444444444"
+  },
+  "blockEntries": [
+    {
+      "index": 999,
+      "batchIndex": 7,
+      "timestamp": 1700000000,
+      "extraData": "0x",
+      "transactions": [
+        {
+          "index": 999,
+          "batchIndex": 7,
+          "blockNumber": 50,
+          "timestamp": 1700000000,
+          "gasLimit": "50000",
+          "target": "0x0000000000000000000000000000000000000000",
+          "origin": "0x0000000000000000000000000000000000000000",
+          "data": "0xf863800782c350945555555555555555555555555555555555555555018212348208a3a0897373e0caf68a22b58488e53f08af56748037e71721628f6f08f7078ff2df5ca04bd333ef0f37dd38e602eb2d9e54b635070966df7e7a7d98f0bb59081df9cef0",
+          "queueOrigin": "sequencer",
+          "value": "0x1",
+          "queueIndex": null,
+          "decoded": {
+            "nonce": "0",
+            "gasPrice": "7",
+            "gasLimit": "50000",
+            "value": "0x1",
+            "target": "0x5555555555555555555555555555555555555555",
+            "data": "0x1234",
+            "sig": {
+              "v": 0,
+              "r": "0x897373e0caf68a22b58488e53f08af56748037e71721628f6f08f7078ff2df5c",
+              "s": "0x4bd333ef0f37dd38e602eb2d9e54b635070966df7e7a7d98f0bb59081df9cef0"
+            }
+          },
+          "confirmed": true,
+          "seqSign": "0x1,0x2,0x0"
+        }
+      ],
+      "confirmed": true
+    },
+    {
+      "index": 1000,
+      "batchIndex": 7,
+      "timestamp": 1700000001,
+      "extraData": "0x",
+      "transactions": [
+        {
+          "index": 1000,
+          "batchIndex": 7,
+          "blockNumber": 51,
+          "timestamp": 1700000001,
+          "gasLimit": "50000",
+          "target": "0x0000000000000000000000000000000000000000",
+          "origin": "6666666666666666666666666666666666666666",
+          "data": "0x1234",
+          "queueOrigin": "l1",
+          "value": "0x0",
+          "queueIndex": 1,
+          "decoded": null,
+          "confirmed": true,
+          "seqSign": null
+        }
+      ],
+      "confirmed": true
+    }
+  ]
+}

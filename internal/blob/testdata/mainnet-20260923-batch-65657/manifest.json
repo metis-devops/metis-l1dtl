@@ -1,0 +1,36 @@
+{
+  "retrievedAtUTC": "2026-09-23T14:26:31.411940+00:00",
+  "address": "0xff00000000000000000000000000000000001088",
+  "l1ChainId": 1,
+  "l2ChainId": 1088,
+  "executionRPC": "https://ethereum-rpc.publicnode.com",
+  "beaconREST": "https://ethereum-beacon-api.publicnode.com",
+  "sources": [
+    {
+      "transactionFile": "blob-transaction-0.json",
+      "beaconFile": "beacon-blobs-0.json.gz",
+      "slot": 15269557,
+      "transactionHash": "0x3dce2977fb8c5ab32dab759b7285e4ff3c8134a02b999a60963ff32cf0050b38",
+      "blobVersionedHashes": [
+        "0x010fd993af895fbcf0483c4a5d10f056fff27eedcdaac0ab16a5b7265eee4a4a"
+      ]
+    }
+  ],
+  "sha256": {
+    "beacon-blobs-0.json.gz": "3188d5744cf8885e45e774885ab8f3d1f8cab82d9b39d6ea30e8c0db598c1684",
+    "beacon-genesis.json": "c91ed3dd5a5c605616a574f074b758bfbfb5ab1c10f5d8cecde198ef4c734d29",
+    "beacon-spec.json": "7f3c6d3d1679e8292994e14b9ceaca0b2eb664879cf8e6a384998c0ce1d79d0a",
+    "blob-transaction-0.json": "2beeb31c440a9486b4c9c5b8fbed79397c45153e3e8b0e0a6397637872df036f",
+    "commitment.json": "f31716f59a0e0da60c9acd4654dfd6bf64f1186b4b8b1dbecf45364f996bcdd7",
+    "typescript-blocks.json.gz": "5bb2b54d7fe7e73d829e285c0a059aa0275a8ab2f6bf5863b5b773254c253a57"
+  },
+  "typescriptReferenceCommit": "d497d8ee18f743f26f35c3606dc7aa8a9866c00f",
+  "expected": {
+    "batchIndex": 65657,
+    "firstL2Block": 23180351,
+    "lastL2Block": 23180427,
+    "blockCount": 77,
+    "transactionCount": 166,
+    "depositCount": 0
+  }
+}

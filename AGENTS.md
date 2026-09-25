@@ -3,13 +3,15 @@
 ## Purpose and scope
 
 `metis-l1dtl` is a Go L1 deposit ingestion service for the existing Metis
-`l2geth` sequencer, matching the DTL behavior with batch ingestion disabled.
+`l2geth` sequencer, matching the DTL deposit behavior, with optional recent Blob-backed L2 block reads.
 
 - Serve one configured L2 chain ID per instance; reject other chain IDs.
 - Scan deposits from the inclusive CTC deployment start, with queue indices
   contiguous from zero. Inbox activation is not the deposit history start.
-- Keep CTC/Inbox batch decoding, MinIO/Blob retrieval, L2 ingestion, state-root
-  and verifier APIs, and old database migration out of scope unless requested.
+- Optional Blob ingestion only decodes DA=3 Inbox submissions into a seven-day
+  block window. Keep legacy CTC/non-Blob decoding, MinIO, full L2 ingestion,
+  transaction/batch APIs, state-root/verifier APIs and old database migration out
+  of scope unless requested.
 - Do not modify the sibling `mvm/l2geth` checkout to make compatibility tests pass.
   This service does not recover L2 history or a missing sequencer enqueue cursor.
 
@@ -22,6 +24,8 @@
   `README.md` and `config.example.sh` consistent with the code.
 - `internal/ingest`: historical AddressManager/CTC tracking, event decoding,
   confirmation boundaries, checkpoint validation and synchronization status.
+- `internal/blob`: Beacon retrieval, KZG validation and Metis Blob/channel/span decoding.
+- `internal/blobingest`: independent Inbox scanning and event-only sender history.
 - `internal/store`: Pebble v2 persistence, database identity and atomic commits.
 - `internal/server`: HTTP compatibility responses and health/readiness routes.
 - `integration`: separate Go module testing the real l2geth RollupClient.
@@ -73,7 +77,18 @@ parameters, field types, null values and client error behavior, not just routes.
 
 - `ctcIndex` stays null; missing deposits return all eight fields as null.
 - Gas limits are decimal strings; indices and timestamps are JSON integers.
-- Transaction/block lookup routes return the agreed empty objects.
+- Transaction routes remain empty. Blob-enabled block routes serve only retained
+  complete channels; gaps/expiry return both block and batch as null.
+- Blob retention is seven days relative to the confirmed L1 head, not wall time
+  or transaction count. Expire source dependencies atomically with derived blocks.
+- Prefer the Blob containing block header slotNumber (including zero); only a
+  missing field permits lazy genesis/spec fallback.
+- Discover manager and sender history using AddressSet/InboxSenderSet logs only,
+  with explicit initial sender defaults and TypeScript event-index semantics.
+  Do not add eth_call fallback or infer unlogged overwrite deletions.
+- Missing Blob data may be skipped; transport failures retry. Malformed evidence
+  and integrity faults still halt both workers. Optional Blob readiness joins
+  deposit readiness, but transient Blob failure must not block deposit commits.
 - Latest L1 context uses current Unix time for its timestamp; numbered context
   uses the actual block timestamp. Do not silently normalize this legacy behavior.
 - The default backend is `l1`; explicit unsupported backends return 400.

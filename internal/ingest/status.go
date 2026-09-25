@@ -8,17 +8,34 @@ import (
 var ErrFatal = errors.New("synchronization integrity error")
 
 type Status struct {
-	mu     sync.RWMutex
-	ready  bool
-	fatal  error
-	halted chan struct{}
+	mu                     sync.RWMutex
+	ready                  bool
+	blobEnabled, blobReady bool
+	fatal                  error
+	halted                 chan struct{}
 }
 
 func (s *Status) Snapshot() (bool, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.ready, s.fatal
+	return s.ready && (!s.blobEnabled || s.blobReady), s.fatal
 }
+
+func (s *Status) EnableBlob() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.blobEnabled = true
+	s.blobReady = false
+}
+
+func (s *Status) SetBlobReady(ready bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.blobReady = ready && s.fatal == nil
+}
+
+// CommitIfHealthy shares the fatal-publication barrier with both ingestion loops.
+func (s *Status) CommitIfHealthy(commit func() error) error { return s.commitIfHealthy(commit) }
 
 func (s *Status) Set(ready bool, err error) {
 	s.mu.Lock()

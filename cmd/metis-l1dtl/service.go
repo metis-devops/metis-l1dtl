@@ -7,9 +7,12 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/metis-devops/metis-l1dtl/internal/blob"
+	"github.com/metis-devops/metis-l1dtl/internal/blobingest"
 	"github.com/metis-devops/metis-l1dtl/internal/config"
 	"github.com/metis-devops/metis-l1dtl/internal/ingest"
 	"github.com/metis-devops/metis-l1dtl/internal/server"
@@ -44,6 +47,15 @@ func runService(ctx context.Context, cfg config.Config) error {
 	}()
 
 	status := &ingest.Status{}
+	var workers []func(context.Context)
+	if cfg.BlobEnabled() {
+		if err := db.InitBlob(store.BlobIdentity{Version: 1, Inbox: cfg.Inbox, BatchSender: cfg.InboxSender, BlobSender: cfg.BlobSender, Start: cfg.InboxStart}); err != nil {
+			return err
+		}
+		status.EnableBlob()
+		blobSyncer := &blobingest.Syncer{Config: cfg, RPC: rpc, Beacon: blob.NewBeacon(cfg.Beacon), Store: db, Status: status}
+		workers = append(workers, blobSyncer.Run)
+	}
 	api := &server.Server{Config: cfg, RPC: rpc, Store: db, Status: status}
 	httpServer := &http.Server{
 		Addr:              cfg.Listen,
@@ -58,7 +70,7 @@ func runService(ctx context.Context, cfg config.Config) error {
 		return err
 	}
 	syncer := &ingest.Syncer{Config: cfg, RPC: rpc, Store: db, Status: status}
-	return serve(ctx, httpServer, listener, syncer)
+	return serve(ctx, httpServer, listener, syncer, workers...)
 }
 
 func validateL1(ctx context.Context, rpc *ethclient.Client, cfg config.Config) error {
@@ -81,13 +93,17 @@ func validateL1(ctx context.Context, rpc *ethclient.Client, cfg config.Config) e
 
 // serve waits for HTTP shutdown and ingestion to finish before its caller closes
 // the shared database and RPC client.
-func serve(ctx context.Context, httpServer *http.Server, listener net.Listener, syncer *ingest.Syncer) error {
+func serve(ctx context.Context, httpServer *http.Server, listener net.Listener, syncer *ingest.Syncer, workers ...func(context.Context)) error {
 	syncCtx, stop := context.WithCancel(ctx)
 	defer stop()
 	syncDone := make(chan struct{})
 	go func() {
 		defer close(syncDone)
-		syncer.Run(syncCtx)
+		var group sync.WaitGroup
+		for _, run := range append(workers, syncer.Run) {
+			group.Go(func() { run(syncCtx) })
+		}
+		group.Wait()
 	}()
 	served := make(chan error, 1)
 	go func() { served <- httpServer.Serve(listener) }()

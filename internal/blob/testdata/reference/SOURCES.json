@@ -1,0 +1,84 @@
+{
+  "repository": "https://github.com/MetisProtocol/mvm",
+  "commit": "d497d8ee18f743f26f35c3606dc7aa8a9866c00f",
+  "license": "MIT (see LICENSE; DTL and core-utils carry the same license)",
+  "files": [
+    {
+      "file": "frame.ts",
+      "source": "packages/data-transport-layer/src/da/blob/frame.ts",
+      "sourceSHA256": "c20e8576254d28ff05c65cca7f7e356570d9b657392c1932eaa311a4c56e1889",
+      "vendoredSHA256": "c20e8576254d28ff05c65cca7f7e356570d9b657392c1932eaa311a4c56e1889",
+      "changes": "Unmodified copy."
+    },
+    {
+      "file": "database-types.ts",
+      "source": "packages/data-transport-layer/src/types/database-types.ts",
+      "sourceSHA256": "56d1ed481a14edbf572af9b0e848d4472b6dca7a9720379df6d816e70048b527",
+      "vendoredSHA256": "56d1ed481a14edbf572af9b0e848d4472b6dca7a9720379df6d816e70048b527",
+      "changes": "Unmodified copy."
+    },
+    {
+      "file": "errors.ts",
+      "source": "packages/data-transport-layer/src/services/l1-ingestion/handlers/errors.ts",
+      "sourceSHA256": "ebfbd85b893fe4b982c96d02a23fb5e59a88dd828fdd84b6ed0f23c8f332935e",
+      "vendoredSHA256": "ebfbd85b893fe4b982c96d02a23fb5e59a88dd828fdd84b6ed0f23c8f332935e",
+      "changes": "Unmodified copy."
+    },
+    {
+      "file": "eth-tx.ts",
+      "source": "packages/data-transport-layer/src/utils/eth-tx.ts",
+      "sourceSHA256": "1922990b1cfa7927b6773bf29aa650430b022c46a717b148bfecc8a82398538f",
+      "vendoredSHA256": "1922990b1cfa7927b6773bf29aa650430b022c46a717b148bfecc8a82398538f",
+      "changes": "Unmodified copy."
+    },
+    {
+      "file": "hex-strings.ts",
+      "source": "packages/core-utils/src/common/hex-strings.ts",
+      "sourceSHA256": "6a085de898b2204a8706b18d847195ef7664631eba556af3c3874159148ca8f1",
+      "vendoredSHA256": "6a085de898b2204a8706b18d847195ef7664631eba556af3c3874159148ca8f1",
+      "changes": "Unmodified copy."
+    },
+    {
+      "file": "blob.ts",
+      "source": "packages/data-transport-layer/src/da/blob/blob.ts",
+      "sourceSHA256": "054115a19acadc426136148cb29d4866042f93bf53ab689f1cefc3b33fb2a311",
+      "vendoredSHA256": "afa2634f03605c5f0b0f6b93348d6783cdb4c21725c623808d91510cefc57e6a",
+      "changes": "Removed unused KZG versionedHash method and native c-kzg/crypto imports. Blob unpacking is unchanged; Go independently verifies KZG."
+    },
+    {
+      "file": "channel.ts",
+      "source": "packages/data-transport-layer/src/da/blob/channel.ts",
+      "sourceSHA256": "17e5b06ae6a337c6d87809443b13319c9842e9f86931a70c677d2ad553d847c9",
+      "vendoredSHA256": "f097190633215bc6dcb6c92f63307783dd1b1ca7172dfe287255a0f50d0dc160",
+      "changes": "Redirected L2Transaction/QueueOrigin import to local copied types; codec logic unchanged."
+    },
+    {
+      "file": "types.ts",
+      "source": "packages/core-utils/src/batches.ts",
+      "sourceSHA256": "56f814f3f86c59328c3b4a76e76c40cfbc79f8b2617a544b4731301a2a3f3966",
+      "vendoredSHA256": "03fb31cf9bd6aa47115a12a6ab1ec0480bad943fc1dc8b73b7a98c24bc9a2c79",
+      "changes": "Copied QueueOrigin and L2Transaction declarations only."
+    },
+    {
+      "file": "index.ts",
+      "source": "packages/data-transport-layer/src/da/blob/index.ts",
+      "sourceSHA256": "241d6a7ef5cca664b0f50edb0ce0d1f70796199cea93df3c5c334d8dfd930359",
+      "vendoredSHA256": "1c2e225cc77e0ce9c2be34abf016f5311cd18fb54dad5709f45d4be20e4b8e43",
+      "changes": "Redirected errors import and replaced network client import with its injected getBlobs interface; fetch/channel logic unchanged."
+    },
+    {
+      "file": "inbox.ts",
+      "source": "packages/data-transport-layer/src/services/l1-ingestion/handlers/sequencer-batch-inbox.ts",
+      "sourceSHA256": "47b486cb6de73f766e5972fd5e5e38a5598ed4cd12a02bd2fc767b37a062ecaf",
+      "vendoredSHA256": "9ee7e59516ccc8144886d7bddbd8fa0e552f25724f74871ac9cf7213628dcbb4",
+      "changes": "Extracted DA=3 fetch, batch metadata, block/transaction mapping and signature helpers verbatim; omitted legacy DA, MinIO, getExtraData and database persistence. Added a Blob-only input guard and local imports."
+    },
+    {
+      "file": "LICENSE",
+      "source": "packages/data-transport-layer/LICENSE",
+      "sourceSHA256": "c650f161c5af8c081e7cfe0b1c0d0f5410d97c6f6494f31c1e9bd18594abb535",
+      "vendoredSHA256": "c650f161c5af8c081e7cfe0b1c0d0f5410d97c6f6494f31c1e9bd18594abb535",
+      "changes": "Unmodified copy."
+    }
+  ]
+}

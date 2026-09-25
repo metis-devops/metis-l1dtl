@@ -151,3 +151,34 @@ func TestFatalPublicationWaitsForInFlightCommit(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestIndependentBlobReadiness(t *testing.T) {
+	s := &Status{}
+	s.EnableBlob()
+	s.Set(true, nil)
+	if ready, _ := s.Snapshot(); ready {
+		t.Fatal("ready before Blob caught up")
+	}
+	s.SetBlobReady(true)
+	if ready, _ := s.Snapshot(); !ready {
+		t.Fatal("not ready")
+	}
+	s.Set(false, nil)
+	if ready, _ := s.Snapshot(); ready {
+		t.Fatal("deposit lag hidden")
+	}
+	s.Set(true, nil)
+	s.SetBlobReady(false)
+	if err := s.CommitIfHealthy(func() error { return nil }); err != nil {
+		t.Fatal("lag blocked deposit commit", err)
+	}
+	s.Set(false, ErrFatal)
+	s.SetBlobReady(true)
+	s.Set(true, nil)
+	if ready, err := s.Snapshot(); ready || err == nil {
+		t.Fatal("fatal cleared")
+	}
+	if err := s.CommitIfHealthy(func() error { t.Fatal("commit after halt"); return nil }); err == nil {
+		t.Fatal("missing fatal")
+	}
+}

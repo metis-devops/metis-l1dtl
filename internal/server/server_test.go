@@ -166,3 +166,35 @@ func TestRoutes(t *testing.T) {
 	request("/readyz", 503)
 	request("/healthz", 200)
 }
+
+func TestBlobStorageFailureAndDisabledCompatibility(t *testing.T) {
+	db, err := store.Open(filepath.Join(t.TempDir(), "db"), store.Identity{Version: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.InitBlob(store.BlobIdentity{Version: 1}); err != nil {
+		t.Fatal(err)
+	}
+	status := &ingest.Status{}
+	status.Set(true, nil)
+	api := &Server{Config: config.Config{L2ChainID: 1088, Beacon: "enabled"}, Store: db, Status: status}
+	handler := api.Handler()
+	empty := httptest.NewRecorder()
+	handler.ServeHTTP(empty, httptest.NewRequest("GET", "/block/latest/1088", nil))
+	if empty.Code != 200 || strings.TrimSpace(empty.Body.String()) != `{"block":null,"batch":null}` {
+		t.Fatal(empty.Body.String())
+	}
+	_ = db.Close()
+	for _, path := range []string{"/block/latest/1088", "/enqueue/latest/1088", "/block/index/1/1088", "/readyz"} {
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
+		if w.Code != 503 {
+			t.Fatal(path, w.Code)
+		}
+	}
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, httptest.NewRequest("GET", "/healthz", nil))
+	if w.Code != 200 {
+		t.Fatal(w.Code)
+	}
+}

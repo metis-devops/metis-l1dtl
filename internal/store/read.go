@@ -67,7 +67,12 @@ func (s *Store) Get(index *uint64) (*Enqueue, error) {
 	if s.closed {
 		return nil, pebble.ErrClosed
 	}
-	st, err := readState(s.db)
+	return readEnqueue(s.db, index)
+}
+
+// Caller holds the store lock, including when joining Blob blocks to deposits.
+func readEnqueue(g getter, index *uint64) (*Enqueue, error) {
+	st, err := readState(g)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +82,7 @@ func (s *Store) Get(index *uint64) (*Enqueue, error) {
 	if index == nil {
 		return nil, nil
 	}
-	raw, err := readValue(s.db, key(*index))
+	raw, err := readValue(g, key(*index))
 	if err != nil {
 		return nil, err
 	}

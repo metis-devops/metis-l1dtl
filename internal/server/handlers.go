@@ -54,6 +54,14 @@ func (s *Server) transaction(_ *http.Request, _ *uint64) (any, int, error) {
 	return map[string]any{"transaction": nil, "batch": nil}, http.StatusOK, nil
 }
 
-func (s *Server) block(_ *http.Request, _ *uint64) (any, int, error) {
-	return map[string]any{"block": nil, "batch": nil}, http.StatusOK, nil
+func (s *Server) block(_ *http.Request, index *uint64) (any, int, error) {
+	if !s.Config.BlobEnabled() {
+		return map[string]any{"block": nil, "batch": nil}, http.StatusOK, nil
+	}
+	out, err := s.Store.GetBlock(index)
+	if err != nil {
+		s.Status.Set(false, err)
+		return nil, http.StatusServiceUnavailable, err
+	}
+	return out, http.StatusOK, nil
 }
