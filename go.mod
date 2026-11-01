@@ -6,7 +6,7 @@ require (
 	github.com/cockroachdb/pebble/v2 v2.1.7
 	github.com/ethereum/go-ethereum v1.17.5
 	github.com/holiman/uint256 v1.3.2
-	github.com/molecule-man/go-brrr v1.1.1
+	github.com/molecule-man/go-brrr v1.3.1
 )
 
 require (
